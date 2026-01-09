@@ -6,6 +6,10 @@ This integration enables you to use [any-llm's](https://github.com/mozilla-ai/an
 
 Stop rewriting your specific adapter code every time you want to test a new model. Switch between OpenAI, Anthropic, Gemini, and local models (via Ollama/LocalAI) just by changing a string.
 
+## Requirements
+
+- Python 3.11, 3.12, or 3.13 
+
 ## Installation
 
 ```bash

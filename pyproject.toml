@@ -9,7 +9,7 @@ description = "An integration package connecting LangChain with AnyLLM"
 readme = "README.md"
 license = {text = "MIT"}
 authors = []
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "langchain-core>=0.3.0,<2.0",
     "any-llm-sdk>=1.0.0,<2.0",
