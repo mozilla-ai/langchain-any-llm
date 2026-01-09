@@ -2,7 +2,8 @@ import json
 import sys
 from typing import Dict
 
-LIB_DIRS = ["libs/{lib}"]
+# Root directory since we flattened the structure
+LIB_DIRS = ["."]
 
 if __name__ == "__main__":
     files = sys.argv[1:]
@@ -14,9 +15,18 @@ if __name__ == "__main__":
 
     if len(files) == 300:
         # max diff length is 300 files - there are likely files missing
-        raise ValueError("Max diff reached. Please manually run CI on changed libs.")
+        raise ValueError("Max diff reached. Please manually run CI on changed files.")
 
     for file in files:
+        # Skip non-code files
+        if file.startswith(".git"):
+            continue
+
+        # For any Python file, test file, or pyproject.toml change, run tests
+        if file.endswith((".py", ".toml")) or file.startswith(("langchain_anyllm/", "tests/", "examples/")):
+            dirs_to_run["test"].add(".")
+
+        # For workflow changes, run tests
         if any(
             file.startswith(dir_)
             for dir_ in (
@@ -26,18 +36,7 @@ if __name__ == "__main__":
                 ".github/scripts/check_diff.py",
             )
         ):
-            # add all LANGCHAIN_DIRS for infra changes
             dirs_to_run["test"].update(LIB_DIRS)
-
-        if any(file.startswith(dir_) for dir_ in LIB_DIRS):
-            for dir_ in LIB_DIRS:
-                if file.startswith(dir_):
-                    dirs_to_run["test"].add(dir_)
-        elif file.startswith("libs/"):
-            raise ValueError(
-                f"Unknown lib: {file}. check_diff.py likely needs "
-                "an update for this new library!"
-            )
 
     outputs = {
         "dirs-to-lint": list(dirs_to_run["lint"] | dirs_to_run["test"]),

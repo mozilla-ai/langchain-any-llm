@@ -1,63 +1,149 @@
-# 🦜️🔗 LangChain {partner}
+# langchain-anyllm
 
-This repository contains 1 package with {partner} integrations with LangChain:
+**One interface for every LLM.**
 
-- [langchain-{package_lower}](https://pypi.org/project/langchain-{package_lower}/)
+This integration enables you to use [any-llm's](https://github.com/mozilla-ai/any-llm) unified interface (supporting OpenAI, Anthropic, Gemini, local models, and more) as a standard LangChain `ChatModel`. See all `any-llm` supported providers [here](https://mozilla-ai.github.io/any-llm/providers/)
 
-## Initial Repo Checklist (Remove this section after completing)
+Stop rewriting your specific adapter code every time you want to test a new model. Switch between OpenAI, Anthropic, Gemini, and local models (via Ollama/LocalAI) just by changing a string.
 
-Welcome to the LangChain Partner Integration Repository! This checklist will help you get started with your new repository.
+## Installation
 
-After creating your repo from the integration-repo-template, we'll go through how to
-set up your new repository in Github.
+```bash
+pip install langchain-anyllm
+```
 
-This setup assumes that the partner package is already split. For those instructions,
-see [these docs](https://docs.langchain.com/oss/python/contributing/integrations-langchain).
+## Features
 
-> [!NOTE]
-> Integration packages can be managed in your own Github organization.
+- **Unified Interface**: Use OpenAI, Anthropic, Google, or local models through a single API
+- **Streaming Support**: Full support for both synchronous and asynchronous streaming
+- **Tool Calling**: Native support for LangChain tool binding
+- **Usage Tracking**: Automatic token usage metadata tracking
+- **Multiple Providers**: See all supported providers [here](https://mozilla-ai.github.io/any-llm/providers/)
 
-Code (auto ecli)
+## Usage
 
-- [ ] Fill out the readme above (for folks that follow pypi link)
-- [ ] Copy package into /libs folder
-- [ ] Update `"Source Code"` and `repository` under `[project.urls]` in /libs/*/pyproject.toml
+**Note:** You need to have the appropriate API key available for your chosen provider. API keys can be passed explicitly via the `api_key` parameter, or set as environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.). See the [any-llm documentation](https://mozilla-ai.github.io/any-llm/providers/) for provider-specific requirements.
 
-Workflow code (auto ecli)
+### Basic Chat
 
-- [ ] Populate .github/workflows/_release.yml with `on.workflow_dispatch.inputs.working-directory.default`
-- [ ] Configure `LIB_DIRS` in .github/scripts/check_diff.py
+```python
+from langchain_anyllm import ChatAnyLLM
 
-Workflow code (manual)
+# Initialize with any supported model
+llm = ChatAnyLLM(model="openai:gpt-4", temperature=0.7)
 
-- [ ] Add secrets as env vars in .github/workflows/_release.yml
+# Invoke for a single response
+response = llm.invoke("Tell me a joke")
+print(response.content)
+```
 
-Monorepo workflow code (manual)
+### Streaming
 
-- [ ] Pull in new code location, remove old in .github/workflows/api_doc_build.yml
+```python
+from langchain_anyllm import ChatAnyLLM
 
-In github (manual)
+llm = ChatAnyLLM(model="openai:gpt-4")
 
-- [ ] Add any required integration testing secrets in Github
-- [ ] Add any required partner collaborators in Github
-- [ ] "Allow auto-merge" in General Settings (recommended)
-- [ ] Only "Allow squash merging" in General Settings (recommended)
-- [ ] Set up ruleset matching CI build (recommended)
-    - name: ci build
-    - enforcement: active
-    - bypass: write
-    - target: default branch
-    - rules: restrict deletions, require status checks ("CI Success"), block force pushes
-- [ ] Set up ruleset (recommended)
-    - name: require prs
-    - enforcement: active
-    - bypass: none
-    - target: default branch
-    - rules: restrict deletions, require a pull request before merging (0 approvals, no boxes), block force pushes
+# Stream responses
+for chunk in llm.stream("Write a poem about the ocean"):
+    print(chunk.content, end="", flush=True)
+```
 
-Pypi (manual)
+### Async Support
 
-- [ ] Add new repo to test-pypi and pypi trusted publishing
+```python
+import asyncio
+from langchain_anyllm import ChatAnyLLM
 
-> [!NOTE]
-> Tag [@ccurme](https://github.com/ccurme) if you have questions on any step.
+async def main():
+    llm = ChatAnyLLM(model="openai:gpt-4")
+
+    # Async invoke
+    response = await llm.ainvoke("What is the meaning of life?")
+    print(response.content)
+
+    # Async streaming
+    async for chunk in llm.astream("Count to 10"):
+        print(chunk.content, end="", flush=True)
+
+asyncio.run(main())
+```
+
+### Tool Calling
+
+```python
+from langchain_anyllm import ChatAnyLLM
+from langchain_core.tools import tool
+
+@tool
+def get_weather(location: str) -> str:
+    """Get the weather for a location."""
+    return f"The weather in {location} is sunny!"
+
+llm = ChatAnyLLM(model="openai:gpt-4")
+llm_with_tools = llm.bind_tools([get_weather])
+
+response = llm_with_tools.invoke("What's the weather in San Francisco?")
+print(response.tool_calls)
+```
+
+### Configuration
+
+```python
+from langchain_anyllm import ChatAnyLLM
+
+llm = ChatAnyLLM(
+    model="openai:gpt-4",
+    api_key="your-api-key",  # Optional, reads from environment if not provided
+    api_base="https://custom-endpoint.com/v1",  # Optional custom endpoint
+    model_kwargs={
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "top_p": 0.9,
+    }
+)
+```
+
+## Parameters
+
+- `model` (str): The model to use (e.g., "openai:gpt-4", "anthropic:claude-3-sonnet-20240229")
+- `api_key` (str, optional): API key for the provider. Reads from environment if not provided
+- `api_base` (str, optional): Custom API endpoint
+- `model_kwargs` (dict, optional): Additional parameters to pass to the model
+
+## Supported Providers
+
+any-llm supports a wide range of providers. See the [full list here](https://mozilla-ai.github.io/any-llm/providers/).
+
+Common providers include:
+- OpenAI (GPT-4, GPT-3.5)
+- Anthropic (Claude)
+- Google (Gemini)
+- Cohere
+- Mistral
+- Ollama (local models)
+- And many more...
+
+## Development
+
+### Running Tests
+
+```bash
+uv run pytest tests/
+```
+
+### Type Checking
+
+```bash
+mypy langchain_anyllm/
+```
+
+### Linting
+
+```bash
+ruff check langchain_anyllm/
+```
+
+## License
+
+MIT

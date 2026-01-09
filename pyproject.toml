@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "langchain-anyllm"
+version = "0.1.0"
+description = "An integration package connecting LangChain with AnyLLM"
+readme = "README.md"
+license = {text = "MIT"}
+authors = []
+requires-python = ">=3.11"
+dependencies = [
+    "langchain-core>=0.3.0,<2.0",
+    "any-llm-sdk>=1.0.0,<2.0",
+]
+
+[project.urls]
+"Source Code" = "https://github.com/mozilla-ai/langchain-any-llm"
+Repository = "https://github.com/mozilla-ai/langchain-any-llm"
+
+[dependency-groups]
+test = [
+    "pytest>=7.3.0",
+    "pytest-asyncio>=0.21.1",
+    "pytest-mock>=3.11.1",
+    "langchain-tests>=0.3.0",
+]
+lint = [
+    "ruff>=0.1.5",
+    "mypy>=1.7.0",
+]
+codespell = [
+    "codespell>=2.2.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["langchain_anyllm"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle
+    "F",  # pyflakes
+    "I",  # isort
+    "W",  # pycodestyle warnings
+]
+
+[tool.mypy]
+disallow_untyped_defs = "True"
+ignore_missing_imports = "True"
+
+[tool.coverage.run]
+omit = ["tests/*"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config --durations=5"
+markers = [
+    "requires: mark tests as requiring a specific library",
+    "asyncio: mark tests as requiring asyncio",
+    "compile: mark placeholder test used to compile integration tests without running them",
+]
+asyncio_mode = "auto"
