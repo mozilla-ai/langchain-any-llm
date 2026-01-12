@@ -6,6 +6,7 @@ enabling seamless integration with LangChain's ecosystem.
 
 from __future__ import annotations
 
+import logging
 from typing import (
     Any,
     AsyncIterator,
@@ -45,6 +46,7 @@ from langchain_anyllm.utils import (
     _convert_message_to_dict,
 )
 
+logger = logging.getLogger(__name__)
 
 class ChatAnyLLM(BaseChatModel):
     """Chat model that uses the AnyLLM API."""
@@ -53,6 +55,9 @@ class ChatAnyLLM(BaseChatModel):
     api_key: str | None = None
     api_base: str | None = None
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
+    stream_options: dict[str, Any] | None = Field(
+        default_factory=lambda: {"include_usage": True}
+    )
 
     def _generate(
         self,
@@ -69,6 +74,7 @@ class ChatAnyLLM(BaseChatModel):
             return generate_from_stream(stream_iter)
 
         message_dicts = [_convert_message_to_dict(m) for m in messages]
+        logger.warning(f"Message dicts: {message_dicts}");
         params = self._create_params(stop, **kwargs)
         response = completion(messages=message_dicts, **params)  # type: ignore[arg-type]
         if not isinstance(response, ChatCompletion):
@@ -129,7 +135,14 @@ class ChatAnyLLM(BaseChatModel):
                 params["tool_choice"] = "required"
             elif tool_choice is False:
                 params["tool_choice"] = "none"
+            elif isinstance(tool_choice, str) and tool_choice not in ["none", "auto", "required"]:
+                # If it's a string that's not a standard value, treat it as a function name
+                params["tool_choice"] = {
+                    "type": "function",
+                    "function": {"name": tool_choice}
+                }
             else:
+                # Pass through dicts and standard string values
                 params["tool_choice"] = tool_choice
 
         # Pass through all kwargs except our special handling
@@ -149,9 +162,13 @@ class ChatAnyLLM(BaseChatModel):
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
+        # Set stream_options for usage metadata if not already provided
+        if "stream_options" not in params and self.stream_options:
+            params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
         result = completion(messages=message_dicts, **params)  # type: ignore[arg-type]
+
         if not isinstance(result, Iterator):
             error_message = f"Expected Iterator, got {type(result)}"
             raise ValueError(error_message)
@@ -159,10 +176,44 @@ class ChatAnyLLM(BaseChatModel):
         # Iterate over stream results
         for chunk_item in result:
             chunk_dict: dict[str, Any] = chunk_item.model_dump()
+
+            # Handle usage-only chunk (final chunk with empty choices but usage data)
             if len(chunk_dict["choices"]) == 0:
+                if chunk_dict.get("usage"):
+                    # Create an empty chunk with usage metadata
+                    from langchain_core.messages import UsageMetadata
+
+                    usage = chunk_dict["usage"]
+                    usage_chunk = AIMessageChunk(
+                        content="",
+                        response_metadata={"model_name": self.model},
+                        usage_metadata=UsageMetadata(
+                            input_tokens=usage.get("prompt_tokens", 0),
+                            output_tokens=usage.get("completion_tokens", 0),
+                            total_tokens=usage.get("total_tokens", 0),
+                        ),
+                    )
+                    cg_chunk = ChatGenerationChunk(message=usage_chunk)
+                    yield cg_chunk
                 continue
-            delta = chunk_dict["choices"][0]["delta"]
+
+            choice = chunk_dict["choices"][0]
+            delta = choice["delta"]
+
             message_chunk = _convert_delta_to_message_chunk(delta, default_chunk_class)
+
+            # Only set usage_metadata on the final chunk (when finish_reason is set)
+            finish_reason = choice.get("finish_reason")
+            if finish_reason and chunk_dict.get("usage"):
+                if isinstance(message_chunk, AIMessageChunk):
+                    from langchain_core.messages import UsageMetadata
+
+                    usage = chunk_dict["usage"]
+                    message_chunk.usage_metadata = UsageMetadata(
+                        input_tokens=usage.get("prompt_tokens", 0),
+                        output_tokens=usage.get("completion_tokens", 0),
+                        total_tokens=usage.get("total_tokens", 0),
+                    )
             default_chunk_class = message_chunk.__class__
             cg_chunk = ChatGenerationChunk(message=message_chunk)
             if run_manager:
@@ -181,6 +232,9 @@ class ChatAnyLLM(BaseChatModel):
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
+        # Set stream_options for usage metadata if not already provided
+        if "stream_options" not in params and self.stream_options:
+            params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
         result = await acompletion(messages=message_dicts, **params)  # type: ignore[arg-type]
@@ -191,11 +245,44 @@ class ChatAnyLLM(BaseChatModel):
             if not isinstance(stream_chunk, ChatCompletionChunk):
                 error_message = "Unexpected chunk type"
                 raise ValueError(error_message)
+
+            # Handle usage-only chunk (final chunk with empty choices but usage data)
+            if len(stream_chunk.choices) == 0:
+                if hasattr(stream_chunk, "usage") and stream_chunk.usage:
+                    from langchain_core.messages import UsageMetadata
+
+                    usage = stream_chunk.usage.model_dump()
+                    usage_chunk = AIMessageChunk(
+                        content="",
+                        response_metadata={"model_name": self.model},
+                        usage_metadata=UsageMetadata(
+                            input_tokens=usage.get("prompt_tokens", 0),
+                            output_tokens=usage.get("completion_tokens", 0),
+                            total_tokens=usage.get("total_tokens", 0),
+                        ),
+                    )
+                    cg_chunk = ChatGenerationChunk(message=usage_chunk)
+                    yield cg_chunk
+                continue
+
             for choice in stream_chunk.choices:
                 delta = choice.delta
                 message_chunk = _convert_delta_to_message_chunk(
                     delta, default_chunk_class
                 )
+
+                # Only set usage_metadata on the final chunk (when finish_reason is set)
+                if choice.finish_reason:
+                    if hasattr(stream_chunk, "usage") and stream_chunk.usage:
+                        if isinstance(message_chunk, AIMessageChunk):
+                            from langchain_core.messages import UsageMetadata
+
+                            usage = stream_chunk.usage.model_dump()
+                            message_chunk.usage_metadata = UsageMetadata(
+                                input_tokens=usage.get("prompt_tokens", 0),
+                                output_tokens=usage.get("completion_tokens", 0),
+                                total_tokens=usage.get("total_tokens", 0),
+                            )
                 default_chunk_class = message_chunk.__class__
                 cg_chunk = ChatGenerationChunk(message=message_chunk)
                 if run_manager:
