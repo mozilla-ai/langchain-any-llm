@@ -50,7 +50,6 @@ logger = logging.getLogger(__name__)
 
 class ChatAnyLLM(BaseChatModel):
     """Chat model that uses the AnyLLM API."""
-
     model: str
     api_key: str | None = None
     api_base: str | None = None
@@ -162,6 +161,7 @@ class ChatAnyLLM(BaseChatModel):
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
+        
         # Set stream_options for usage metadata if not already provided
         if "stream_options" not in params and self.stream_options:
             params["stream_options"] = self.stream_options
@@ -206,7 +206,6 @@ class ChatAnyLLM(BaseChatModel):
             finish_reason = choice.get("finish_reason")
             if finish_reason and chunk_dict.get("usage"):
                 if isinstance(message_chunk, AIMessageChunk):
-                    from langchain_core.messages import UsageMetadata
 
                     usage = chunk_dict["usage"]
                     message_chunk.usage_metadata = UsageMetadata(
