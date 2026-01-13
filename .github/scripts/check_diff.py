@@ -18,8 +18,8 @@ if __name__ == "__main__":
         raise ValueError("Max diff reached. Please manually run CI on changed files.")
 
     for file in files:
-        # Skip non-code files
-        if file.startswith(".git"):
+        # Skip git internal files (but not .github/ directory)
+        if file.startswith(".git/"):
             continue
 
         # For any Python file, test file, or pyproject.toml change, run tests
