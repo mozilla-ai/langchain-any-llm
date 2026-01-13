@@ -23,7 +23,9 @@ if __name__ == "__main__":
             continue
 
         # For any Python file, test file, or pyproject.toml change, run tests
-        if file.endswith((".py", ".toml")) or file.startswith(("langchain_anyllm/", "tests/", "examples/")):
+        if file.endswith((".py", ".toml")) or file.startswith(
+            ("langchain_anyllm/", "tests/", "examples/")
+        ):
             dirs_to_run["test"].add(".")
 
         # For workflow changes, run tests

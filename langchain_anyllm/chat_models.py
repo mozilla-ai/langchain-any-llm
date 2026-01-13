@@ -48,8 +48,10 @@ from langchain_anyllm.utils import (
 
 logger = logging.getLogger(__name__)
 
+
 class ChatAnyLLM(BaseChatModel):
     """Chat model that uses the AnyLLM API."""
+
     model: str
     api_key: str | None = None
     api_base: str | None = None
@@ -77,7 +79,7 @@ class ChatAnyLLM(BaseChatModel):
             return generate_from_stream(stream_iter)
 
         message_dicts = [_convert_message_to_dict(m) for m in messages]
-        logger.warning(f"Message dicts: {message_dicts}");
+        logger.warning(f"Message dicts: {message_dicts}")
         params = self._create_params(stop, **kwargs)
         response = completion(messages=message_dicts, **params)  # type: ignore[arg-type]
         if not isinstance(response, ChatCompletion):
@@ -128,7 +130,9 @@ class ChatAnyLLM(BaseChatModel):
         if stop is not None:
             if is_anthropic:
                 if "stop_sequences" in params:
-                    error_message = "`stop_sequences` found in both the input and default params."
+                    error_message = (
+                        "`stop_sequences` found in both the input and default params."
+                    )
                     raise ValueError(error_message)
                 params["stop_sequences"] = stop
             else:
@@ -148,11 +152,16 @@ class ChatAnyLLM(BaseChatModel):
                 params["tool_choice"] = "required"
             elif tool_choice is False:
                 params["tool_choice"] = "none"
-            elif isinstance(tool_choice, str) and tool_choice not in ["none", "auto", "required"]:
-                # If it's a string that's not a standard value, treat it as a function name
+            elif isinstance(tool_choice, str) and tool_choice not in [
+                "none",
+                "auto",
+                "required",
+            ]:
+                # If it's a string that's not a standard value,
+                # treat it as a function name
                 params["tool_choice"] = {
                     "type": "function",
-                    "function": {"name": tool_choice}
+                    "function": {"name": tool_choice},
                 }
             else:
                 # Pass through dicts and standard string values

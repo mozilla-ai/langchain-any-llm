@@ -1,11 +1,10 @@
 """Test utility functions."""
 
-import pytest
 from langchain_core.messages import (
     AIMessage,
-    AIMessageChunk,
     HumanMessage,
     SystemMessage,
+    ToolCall,
     ToolMessage,
 )
 
@@ -78,11 +77,11 @@ class TestMessageConversion:
 
     def test_lc_tool_call_to_openai_format(self) -> None:
         """Test converting LangChain tool call to OpenAI format."""
-        tool_call = {
-            "id": "call_123",
-            "name": "get_weather",
-            "args": {"location": "Paris", "unit": "celsius"},
-        }
+        tool_call = ToolCall(
+            id="call_123",
+            name="get_weather",
+            args={"location": "Paris", "unit": "celsius"},
+        )
         result = _lc_tool_call_to_openai_tool_call(tool_call)
         assert result["type"] == "function"
         assert result["id"] == "call_123"

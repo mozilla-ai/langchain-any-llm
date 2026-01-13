@@ -48,6 +48,22 @@ spell_fix:
 	uv run codespell --toml pyproject.toml -w
 
 ######################
+# PRE-COMMIT
+######################
+
+# Install pre-commit hooks
+pc-install:
+	uv run pre-commit install
+
+# Run pre-commit on all files
+pc-run:
+	uv run pre-commit run --all-files
+
+# Update pre-commit hooks
+pc-update:
+	uv run pre-commit autoupdate
+
+######################
 # HELP
 ######################
 
@@ -61,3 +77,6 @@ help:
 	@echo 'integration_tests            - run integration tests'
 	@echo 'spell_check                  - run codespell on the project'
 	@echo 'spell_fix                    - run codespell on the project and fix the errors'
+	@echo 'pc-install                   - install pre-commit hooks'
+	@echo 'pc-run                       - run pre-commit on all files'
+	@echo 'pc-update                    - update pre-commit hooks'

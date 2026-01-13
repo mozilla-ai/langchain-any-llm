@@ -12,7 +12,6 @@ from langchain_anyllm import ChatAnyLLM
 
 
 class TestChatAnyLLMUnit(ChatModelUnitTests):
-
     @property
     def chat_model_class(self) -> Type[ChatAnyLLM]:
         """Return the ChatModel class to test."""

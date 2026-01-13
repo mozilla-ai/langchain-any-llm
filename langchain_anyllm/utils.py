@@ -1,5 +1,4 @@
-"""Utility functions for message conversion.
-"""
+"""Utility functions for message conversion."""
 
 from __future__ import annotations
 
@@ -145,13 +144,9 @@ def _convert_delta_to_message_chunk(
                             if func_is_dict
                             else getattr(func, "arguments", "")
                         )
-                        rtc_id = (
-                            rtc.get("id") if is_dict else getattr(rtc, "id", None)
-                        )
+                        rtc_id = rtc.get("id") if is_dict else getattr(rtc, "id", None)
                         rtc_index = (
-                            rtc.get("index")
-                            if is_dict
-                            else getattr(rtc, "index", None)
+                            rtc.get("index") if is_dict else getattr(rtc, "index", None)
                         )
                         tool_call_chunks.append(
                             ToolCallChunk(
@@ -258,7 +253,7 @@ def _filter_anthropic_content_blocks(content: Any) -> Any:
     """Filter Anthropic-style content blocks to OpenAI-compatible format.
 
     Removes tool_use blocks since they're represented separately in tool_calls.
-    OpenAI only supports: 'text', 'image_url', 'input_audio', 'refusal', 'audio', 'file'.
+    OpenAI supports: 'text', 'image_url', 'input_audio', 'refusal', 'audio', 'file'.
 
     Args:
         content: Message content (can be string, list, or other)
@@ -311,7 +306,9 @@ def _convert_message_to_dict(message: BaseMessage) -> dict[str, Any]:
     Raises:
         ValueError: If message type is unknown
     """
-    message_dict: dict[str, Any] = {"content": _filter_anthropic_content_blocks(message.content)}
+    message_dict: dict[str, Any] = {
+        "content": _filter_anthropic_content_blocks(message.content)
+    }
     if isinstance(message, ChatMessage):
         message_dict["role"] = message.role
     elif isinstance(message, HumanMessage):

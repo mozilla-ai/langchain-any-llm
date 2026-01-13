@@ -1,7 +1,6 @@
 """Test ChatAnyLLM chat model."""
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from langchain_anyllm import ChatAnyLLM
 
@@ -57,6 +56,7 @@ class TestChatAnyLLM:
 
         class TestSchema(BaseModel):
             """Test schema."""
+
             name: str
             age: int
 
