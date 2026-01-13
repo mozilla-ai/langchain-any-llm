@@ -1,3 +1,6 @@
+# Pre-commit hooks configuration
+# Run with: make pc-run
+# Install hooks: make pc-install
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
