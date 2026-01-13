@@ -22,7 +22,7 @@ class TestChatAnyLLMStandard(ChatModelIntegrationTests):
     @property
     def chat_model_params(self) -> dict:
         return {
-            "model": "openai:gpt-4o-mini",
+            "model": "anthropic:claude-sonnet-4-5-20250929",
             "model_kwargs": {"temperature": 0},
         }
 
@@ -65,7 +65,7 @@ class TestChatAnyLLMStandard(ChatModelIntegrationTests):
 
 # Skip tests if no API key is available
 pytestmark = pytest.mark.skipif(
-    not os.environ.get("OPENAI_API_KEY"),
-    reason="OPENAI_API_KEY environment variable not set. "
+    not os.environ.get("ANTHROPIC_API_KEY"),
+    reason="ANTHROPIC_API_KEY environment variable not set. "
     "These tests require a valid API key to run.",
 )

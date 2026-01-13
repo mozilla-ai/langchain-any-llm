@@ -13,7 +13,6 @@ from langchain_anyllm import ChatAnyLLM
 
 
 def basic_chat_sync() -> None:
-    """Synchronous basic chat example."""
     llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
 
     messages = [
@@ -26,7 +25,6 @@ def basic_chat_sync() -> None:
 
 
 def streaming_example_sync() -> None:
-    """Synchronous streaming response example."""
     llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
 
     messages = [("human", "Tell me a short story about a robot.")]
@@ -38,7 +36,6 @@ def streaming_example_sync() -> None:
 
 
 def tool_calling_example_sync() -> None:
-    """Synchronous tool calling example."""
     from pydantic import BaseModel, Field
 
     class GetWeather(BaseModel):
@@ -65,7 +62,6 @@ def tool_calling_example_sync() -> None:
 
 
 def structured_output_example_sync() -> None:
-    """Synchronous structured output example using tool calling."""
     from pydantic import BaseModel, Field
 
     class Person(BaseModel):
@@ -93,7 +89,6 @@ def structured_output_example_sync() -> None:
 
 
 async def basic_chat() -> None:
-    """Async basic chat example."""
     llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
 
     messages = [
@@ -106,7 +101,6 @@ async def basic_chat() -> None:
 
 
 async def streaming_example() -> None:
-    """Async streaming response example."""
     llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
 
     messages = [("human", "Tell me a short story about a robot.")]
@@ -118,7 +112,6 @@ async def streaming_example() -> None:
 
 
 async def tool_calling_example() -> None:
-    """Async tool calling example."""
     from pydantic import BaseModel, Field
 
     class GetWeather(BaseModel):
@@ -145,7 +138,6 @@ async def tool_calling_example() -> None:
 
 
 async def structured_output_example() -> None:
-    """Async structured output example using tool calling."""
     from pydantic import BaseModel, Field
 
     class Person(BaseModel):
@@ -173,7 +165,6 @@ async def structured_output_example() -> None:
 
 
 def run_sync_examples() -> None:
-    """Run all synchronous examples."""
     print("=== Basic Chat (Sync) ===")
     try:
         basic_chat_sync()
@@ -200,7 +191,6 @@ def run_sync_examples() -> None:
 
 
 async def run_async_examples() -> None:
-    """Run all asynchronous examples."""
     print("\n=== Basic Chat (Async) ===")
     try:
         await basic_chat()
@@ -226,14 +216,13 @@ async def run_async_examples() -> None:
         print(f"Error in structured_output_example: {e}")
 
 
-async def main() -> None:
-    """Run all examples."""
-    # Run sync examples first
+def main() -> None:
+    # Run sync examples first (outside of async context)
     run_sync_examples()
 
     # Then run async examples
-    await run_async_examples()
+    asyncio.run(run_async_examples())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
