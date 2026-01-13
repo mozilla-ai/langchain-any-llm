@@ -4,7 +4,13 @@
 
 This integration enables you to use [any-llm's](https://github.com/mozilla-ai/any-llm) unified interface (supporting OpenAI, Anthropic, Gemini, local models, and more) as a standard LangChain `ChatModel`. See all `any-llm` supported providers [here](https://mozilla-ai.github.io/any-llm/providers/)
 
-Stop rewriting your specific adapter code every time you want to test a new model. Switch between OpenAI, Anthropic, Gemini, and local models (via Ollama/LocalAI) just by changing a string.
+No need to rewrite your provider-specific adapter code every time you want to test a new model. Switch between OpenAI, Anthropic, Gemini, and local models (via Ollama/LocalAI) just by changing a string.
+
+## Features
+
+- **Unified Interface**: Use OpenAI, Anthropic, Google, or local models through a single API
+- **Streaming Support**: Full support for both synchronous and asynchronous streaming
+- **Tool Calling**: Native support for LangChain tool binding
 
 ## Requirements
 
@@ -12,19 +18,13 @@ Stop rewriting your specific adapter code every time you want to test a new mode
 
 ## Installation
 
+### From PyPI
+
 ```bash
-pip install langchain-anyllm
+*Coming soon...*
 ```
 
-## Features
-
-- **Unified Interface**: Use OpenAI, Anthropic, Google, or local models through a single API
-- **Streaming Support**: Full support for both synchronous and asynchronous streaming
-- **Tool Calling**: Native support for LangChain tool binding
-- **Usage Tracking**: Automatic token usage metadata tracking
-- **Multiple Providers**: See all supported providers [here](https://mozilla-ai.github.io/any-llm/providers/)
-
-## Usage
+## Quick Start
 
 **Note:** You need to have the appropriate API key available for your chosen provider. API keys can be passed explicitly via the `api_key` parameter, or set as environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.). See the [any-llm documentation](https://mozilla-ai.github.io/any-llm/providers/) for provider-specific requirements.
 
@@ -119,18 +119,17 @@ llm = ChatAnyLLM(
 
 any-llm supports a wide range of providers. See the [full list here](https://mozilla-ai.github.io/any-llm/providers/).
 
-Common providers include:
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
-- Google (Gemini)
-- Cohere
-- Mistral
-- Ollama (local models)
-- And many more...
 
 ## Development
 
-### Running Tests
+### Clone the repo
+
+```bash
+git clone [https://github.com/mozilla-ai/langchain-any-llm.git](https://github.com/mozilla-ai/langchain-any-llm.git)
+cd langchain-any-llm/libs/langchain-any-llm
+```
+
+### Run Tests
 
 ```bash
 uv run pytest tests/
