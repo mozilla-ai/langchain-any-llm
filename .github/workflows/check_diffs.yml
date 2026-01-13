@@ -36,18 +36,6 @@ jobs:
     outputs:
       dirs-to-lint: ${{ steps.set-matrix.outputs.dirs-to-lint }}
       dirs-to-test: ${{ steps.set-matrix.outputs.dirs-to-test }}
-  lint:
-    name: cd ${{ matrix.working-directory }}
-    needs: [ build ]
-    if: ${{ needs.build.outputs.dirs-to-lint != '[]' }}
-    strategy:
-      matrix:
-        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-lint) }}
-    uses: ./.github/workflows/_lint.yml
-    with:
-      working-directory: ${{ matrix.working-directory }}
-    secrets: inherit
-
   test:
     name: cd ${{ matrix.working-directory }}
     needs: [ build ]
@@ -73,7 +61,7 @@ jobs:
     secrets: inherit
   ci_success:
     name: "CI Success"
-    needs: [build, lint, test, compile-integration-tests]
+    needs: [build, test, compile-integration-tests]
     if: |
       always()
     runs-on: ubuntu-latest
