@@ -1,4 +1,4 @@
-.PHONY: all format lint test tests integration_tests help
+.PHONY: all format lint lint_package lint_tests test tests integration_tests help
 
 # Default target executed when no arguments are given to make.
 all: help
@@ -29,6 +29,16 @@ lint lint_diff:
 	uv run ruff check .
 	uv run mypy .
 
+# Lint package code only
+lint_package:
+	uv run ruff check langchain_anyllm/
+	uv run mypy langchain_anyllm/
+
+# Lint test code only
+lint_tests:
+	uv run ruff check tests/
+	uv run mypy tests/
+
 # Spell check
 spell_check:
 	uv run codespell --toml pyproject.toml
@@ -44,7 +54,9 @@ spell_fix:
 help:
 	@echo '----'
 	@echo 'format                       - run code formatters'
-	@echo 'lint                         - run linters'
+	@echo 'lint                         - run linters on all code'
+	@echo 'lint_package                 - run linters on package code only'
+	@echo 'lint_tests                   - run linters on test code only'
 	@echo 'test                         - run unit tests'
 	@echo 'integration_tests            - run integration tests'
 	@echo 'spell_check                  - run codespell on the project'
