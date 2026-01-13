@@ -167,7 +167,7 @@ jobs:
         env:
           PARTNER_API_KEY: ${{ secrets.PARTNER_API_KEY }}
         run: |
-          uv sync --group test --group test_integration
+          uv sync --group test
           make integration_tests
         working-directory: ${{ inputs.working-directory }}
 

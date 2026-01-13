@@ -40,7 +40,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        # Also installs dev/lint/test/typing dependencies, to ensure we have
+        # Also installs dev/lint/test dependencies, to ensure we have
         # type hints for as many of our libraries as possible.
         # This helps catch errors that require dependencies to be spotted, for example:
         # https://github.com/langchain-ai/langchain/pull/10249/files#diff-935185cd488d015f026dcd9e19616ff62863e8cde8c0bee70318d3ccbca98341
@@ -50,7 +50,7 @@ jobs:
         # It doesn't matter how you change it, any change will cause a cache-bust.
         working-directory: ${{ inputs.working-directory }}
         run: |
-          uv sync --group lint --group typing
+          uv sync --group lint
 
       - name: Analysing the code with our lint
         working-directory: ${{ inputs.working-directory }}
@@ -60,7 +60,7 @@ jobs:
       - name: Install unit+integration test dependencies
         working-directory: ${{ inputs.working-directory }}
         run: |
-          uv sync --inexact --group test --group test_integration
+          uv sync --inexact --group test
 
       - name: Analysing the code with our lint
         working-directory: ${{ inputs.working-directory }}
