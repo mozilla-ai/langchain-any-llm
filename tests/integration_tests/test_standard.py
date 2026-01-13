@@ -14,7 +14,6 @@ from langchain_anyllm import ChatAnyLLM
 
 
 class TestChatAnyLLMStandard(ChatModelIntegrationTests):
-
     @property
     def chat_model_class(self) -> Type[ChatAnyLLM]:
         return ChatAnyLLM

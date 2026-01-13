@@ -1,14 +1,20 @@
 """Basic usage examples for langchain-anyllm.
 
-Note: You need to have the appropriate API key available for your chosen provider. API keys can be passed explicitly via the `api_key` parameter, or set as environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.). See the [any-llm documentation](https://mozilla-ai.github.io/any-llm/providers/) for provider-specific requirements.
+Note: You need to have the appropriate API key available for your chosen provider.
+API keys can be passed explicitly via the `api_key` parameter, or set as
+environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.).
+See the [any-llm documentation](https://mozilla-ai.github.io/any-llm/providers/)
+for provider-specific requirements.
 
     python examples/basic_usage.py
 
 Or run individual async examples:
-    python -c "import asyncio; from basic_usage import basic_chat; asyncio.run(basic_chat())"
+    python -c "import asyncio; from basic_usage import basic_chat; \\
+        asyncio.run(basic_chat())"
 """
 
 import asyncio
+
 from langchain_anyllm import ChatAnyLLM
 
 

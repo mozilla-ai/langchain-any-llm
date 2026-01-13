@@ -1,24 +1,20 @@
-from collections import defaultdict
 import sys
+from collections import defaultdict
 from typing import Optional
 
 if sys.version_info >= (3, 11):
     import tomllib
 else:
-    # for python 3.10 and below, which doesnt have stdlib tomllib
+    # for python 3.10 and below, which doesn't have stdlib tomllib
     import tomli as tomllib
 
-from packaging.requirements import Requirement
-from packaging.specifiers import SpecifierSet
-from packaging.version import Version
-
-
-import requests
-from packaging.version import parse
+import re
 from typing import List
 
-import re
-
+import requests
+from packaging.requirements import Requirement
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version, parse
 
 MIN_VERSION_LIBS = ["langchain-core"]
 
@@ -53,20 +49,25 @@ def get_minimum_version(package_name: str, spec_string: str) -> Optional[str]:
 
     Args:
         package_name (str): Name of the package
-        spec_string (str): Version specification string (e.g., ">=0.2.43,<0.4.0,!=0.3.0")
+        spec_string (str): Version specification string
+            (e.g., ">=0.2.43,<0.4.0,!=0.3.0")
 
     Returns:
         Optional[str]: Minimum compatible version or None if no compatible version found
     """
     # rewrite occurrences of ^0.0.z to 0.0.z (can be anywhere in constraint string)
     spec_string = re.sub(r"\^0\.0\.(\d+)", r"0.0.\1", spec_string)
-    # rewrite occurrences of ^0.y.z to >=0.y.z,<0.y+1 (can be anywhere in constraint string)
+    # rewrite occurrences of ^0.y.z to >=0.y.z,<0.y+1
+    # (can be anywhere in constraint string)
     for y in range(1, 10):
-        spec_string = re.sub(rf"\^0\.{y}\.(\d+)", rf">=0.{y}.\1,<0.{y+1}", spec_string)
-    # rewrite occurrences of ^x.y.z to >=x.y.z,<x+1.0.0 (can be anywhere in constraint string)
+        spec_string = re.sub(
+            rf"\^0\.{y}\.(\d+)", rf">=0.{y}.\1,<0.{y + 1}", spec_string
+        )
+    # rewrite occurrences of ^x.y.z to >=x.y.z,<x+1.0.0
+    # (can be anywhere in constraint string)
     for x in range(1, 10):
         spec_string = re.sub(
-            rf"\^{x}\.(\d+)\.(\d+)", rf">={x}.\1.\2,<{x+1}", spec_string
+            rf"\^{x}\.(\d+)\.(\d+)", rf">={x}.\1.\2,<{x + 1}", spec_string
         )
 
     spec_set = SpecifierSet(spec_string)
@@ -150,21 +151,24 @@ def check_python_version(version_string, constraint_string):
     Check if the given Python version matches the given constraints.
 
     :param version_string: A string representing the Python version (e.g. "3.8.5").
-    :param constraint_string: A string representing the package's Python version constraints (e.g. ">=3.6, <4.0").
+    :param constraint_string: A string representing the package's Python version
+        constraints (e.g. ">=3.6, <4.0").
     :return: True if the version matches the constraints, False otherwise.
     """
 
     # rewrite occurrences of ^0.0.z to 0.0.z (can be anywhere in constraint string)
     constraint_string = re.sub(r"\^0\.0\.(\d+)", r"0.0.\1", constraint_string)
-    # rewrite occurrences of ^0.y.z to >=0.y.z,<0.y+1.0 (can be anywhere in constraint string)
+    # rewrite occurrences of ^0.y.z to >=0.y.z,<0.y+1.0
+    # (can be anywhere in constraint string)
     for y in range(1, 10):
         constraint_string = re.sub(
-            rf"\^0\.{y}\.(\d+)", rf">=0.{y}.\1,<0.{y+1}.0", constraint_string
+            rf"\^0\.{y}\.(\d+)", rf">=0.{y}.\1,<0.{y + 1}.0", constraint_string
         )
-    # rewrite occurrences of ^x.y.z to >=x.y.z,<x+1.0.0 (can be anywhere in constraint string)
+    # rewrite occurrences of ^x.y.z to >=x.y.z,<x+1.0.0
+    # (can be anywhere in constraint string)
     for x in range(1, 10):
         constraint_string = re.sub(
-            rf"\^{x}\.0\.(\d+)", rf">={x}.0.\1,<{x+1}.0.0", constraint_string
+            rf"\^{x}\.0\.(\d+)", rf">={x}.0.\1,<{x + 1}.0.0", constraint_string
         )
 
     try:

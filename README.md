@@ -8,7 +8,7 @@ Stop rewriting your specific adapter code every time you want to test a new mode
 
 ## Requirements
 
-- Python 3.11, 3.12, or 3.13 
+- Python 3.11, 3.12, or 3.13
 
 ## Installation
 
