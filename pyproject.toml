@@ -12,7 +12,9 @@ authors = []
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "langchain-core>=0.3.0,<2.0",
-    "any-llm-sdk>=1.0.0,<2.0",
+    "any-llm-sdk[anthropic]>=1.0.0,<2.0",
+    "pytest>=8.4.2",
+    "langchain-tests>=1.1.2",
 ]
 
 [project.urls]

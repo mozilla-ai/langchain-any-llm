@@ -58,6 +58,10 @@ class ChatAnyLLM(BaseChatModel):
         default_factory=lambda: {"include_usage": True}
     )
 
+    def _is_anthropic_model(self) -> bool:
+        """Check if the model is an Anthropic model."""
+        return self.model.startswith("anthropic:") or "claude" in self.model.lower()
+
     def _generate(
         self,
         messages: list[BaseMessage],
@@ -117,11 +121,21 @@ class ChatAnyLLM(BaseChatModel):
             "model": self.model,
             **self.model_kwargs,
         }
+
+        is_anthropic = self._is_anthropic_model()
+
+        # Handle stop sequences - Anthropic uses stop_sequences instead of stop
         if stop is not None:
-            if "stop" in params:
-                error_message = "`stop` found in both the input and default params."
-                raise ValueError(error_message)
-            params["stop"] = stop
+            if is_anthropic:
+                if "stop_sequences" in params:
+                    error_message = "`stop_sequences` found in both the input and default params."
+                    raise ValueError(error_message)
+                params["stop_sequences"] = stop
+            else:
+                if "stop" in params:
+                    error_message = "`stop` found in both the input and default params."
+                    raise ValueError(error_message)
+                params["stop"] = stop
 
         # Translate LangChain tool_choice to OpenAI-compatible values
         # Only include tool_choice if tools are present
@@ -161,10 +175,12 @@ class ChatAnyLLM(BaseChatModel):
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
-        
+
         # Set stream_options for usage metadata if not already provided
-        if "stream_options" not in params and self.stream_options:
-            params["stream_options"] = self.stream_options
+        # Note: Anthropic doesn't support stream_options parameter
+        if not self._is_anthropic_model():
+            if "stream_options" not in params and self.stream_options:
+                params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
         result = completion(messages=message_dicts, **params)  # type: ignore[arg-type]
@@ -181,8 +197,6 @@ class ChatAnyLLM(BaseChatModel):
             if len(chunk_dict["choices"]) == 0:
                 if chunk_dict.get("usage"):
                     # Create an empty chunk with usage metadata
-                    from langchain_core.messages import UsageMetadata
-
                     usage = chunk_dict["usage"]
                     usage_chunk = AIMessageChunk(
                         content="",
@@ -206,13 +220,13 @@ class ChatAnyLLM(BaseChatModel):
             finish_reason = choice.get("finish_reason")
             if finish_reason and chunk_dict.get("usage"):
                 if isinstance(message_chunk, AIMessageChunk):
-
                     usage = chunk_dict["usage"]
                     message_chunk.usage_metadata = UsageMetadata(
                         input_tokens=usage.get("prompt_tokens", 0),
                         output_tokens=usage.get("completion_tokens", 0),
                         total_tokens=usage.get("total_tokens", 0),
                     )
+                    message_chunk.response_metadata = {"model_name": self.model}
             default_chunk_class = message_chunk.__class__
             cg_chunk = ChatGenerationChunk(message=message_chunk)
             if run_manager:
@@ -231,9 +245,12 @@ class ChatAnyLLM(BaseChatModel):
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
+
         # Set stream_options for usage metadata if not already provided
-        if "stream_options" not in params and self.stream_options:
-            params["stream_options"] = self.stream_options
+        # Note: Anthropic doesn't support stream_options parameter
+        if not self._is_anthropic_model():
+            if "stream_options" not in params and self.stream_options:
+                params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
         result = await acompletion(messages=message_dicts, **params)  # type: ignore[arg-type]
@@ -248,8 +265,6 @@ class ChatAnyLLM(BaseChatModel):
             # Handle usage-only chunk (final chunk with empty choices but usage data)
             if len(stream_chunk.choices) == 0:
                 if hasattr(stream_chunk, "usage") and stream_chunk.usage:
-                    from langchain_core.messages import UsageMetadata
-
                     usage = stream_chunk.usage.model_dump()
                     usage_chunk = AIMessageChunk(
                         content="",
@@ -274,14 +289,13 @@ class ChatAnyLLM(BaseChatModel):
                 if choice.finish_reason:
                     if hasattr(stream_chunk, "usage") and stream_chunk.usage:
                         if isinstance(message_chunk, AIMessageChunk):
-                            from langchain_core.messages import UsageMetadata
-
                             usage = stream_chunk.usage.model_dump()
                             message_chunk.usage_metadata = UsageMetadata(
                                 input_tokens=usage.get("prompt_tokens", 0),
                                 output_tokens=usage.get("completion_tokens", 0),
                                 total_tokens=usage.get("total_tokens", 0),
                             )
+                            message_chunk.response_metadata = {"model_name": self.model}
                 default_chunk_class = message_chunk.__class__
                 cg_chunk = ChatGenerationChunk(message=message_chunk)
                 if run_manager:
