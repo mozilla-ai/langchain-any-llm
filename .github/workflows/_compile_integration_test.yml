@@ -20,8 +20,8 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.9"
-          - "3.12"
+          - "3.11"
+          - "3.13"
     name: "uv run pytest -m compile tests/integration_tests"
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
 
       - name: Install integration dependencies
         shell: bash
-        run: uv sync --group test --group test_integration
+        run: uv sync --group test
 
       - name: Check integration tests compile
         shell: bash
