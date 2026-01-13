@@ -8,14 +8,11 @@ inputs:
     description: Python version, supporting MAJOR.MINOR only
     required: true
 
-env:
-  UV_VERSION: "0.5.25"
-
 runs:
   using: composite
   steps:
     - name: Install uv and set the python version
       uses: astral-sh/setup-uv@v5
       with:
-        version: ${{ env.UV_VERSION }}
+        version: "0.5.25"
         python-version: ${{ inputs.python-version }}
