@@ -87,6 +87,7 @@ def structured_output_example_sync() -> None:
     )
 
     # Result is already a Person instance
+    assert isinstance(result, Person)
     print(f"Name: {result.name}")
     print(f"Age: {result.age}")
     print(f"Occupation: {result.occupation}")
@@ -161,6 +162,7 @@ async def structured_output_example() -> None:
     )
 
     # Result is already a Person instance
+    assert isinstance(result, Person)
     print(f"Name: {result.name}")
     print(f"Age: {result.age}")
     print(f"Occupation: {result.occupation}")
