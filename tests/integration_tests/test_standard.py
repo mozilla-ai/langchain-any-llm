@@ -22,7 +22,7 @@ class TestChatAnyLLMStandard(ChatModelIntegrationTests):
     def chat_model_params(self) -> dict:
         return {
             "model": "openai:gpt-4o-mini",
-            "model_kwargs": {"temperature": 0},
+            "temperature": 0,
         }
 
     @property

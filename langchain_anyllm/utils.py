@@ -5,11 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Mapping
-from typing import (
-    Any,
-    Dict,
-    Union,
-)
+from typing import Any
 
 from any_llm.types.completion import ChoiceDelta
 from langchain_core.messages import (
@@ -85,7 +81,7 @@ def _convert_dict_to_message(_dict: Mapping[str, Any]) -> BaseMessage:
 
 
 def _convert_delta_to_message_chunk(
-    delta: Union[ChoiceDelta, Dict[str, Any]], default_class: type[BaseMessageChunk]
+    delta: ChoiceDelta | dict[str, Any], default_class: type[BaseMessageChunk]
 ) -> BaseMessageChunk:
     """Convert a streaming delta to a LangChain message chunk.
 

@@ -398,8 +398,6 @@ source = { editable = "." }
 dependencies = [
     { name = "any-llm-sdk", extra = ["anthropic"] },
     { name = "langchain-core" },
-    { name = "langchain-tests" },
-    { name = "pytest" },
 ]
 
 [package.dev-dependencies]
@@ -424,8 +422,6 @@ test = [
 requires-dist = [
     { name = "any-llm-sdk", extras = ["anthropic"], specifier = ">=1.0.0,<2.0" },
     { name = "langchain-core", specifier = ">=0.3.0,<2.0" },
-    { name = "langchain-tests", specifier = ">=1.1.2" },
-    { name = "pytest", specifier = ">=8.4.2" },
 ]
 
 [package.metadata.requires-dev]

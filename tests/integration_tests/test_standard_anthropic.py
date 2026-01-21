@@ -13,7 +13,7 @@ from langchain_tests.integration_tests import ChatModelIntegrationTests
 from langchain_anyllm import ChatAnyLLM
 
 
-class TestChatAnyLLMStandard(ChatModelIntegrationTests):
+class TestChatAnyLLMAnthropicStandard(ChatModelIntegrationTests):
     @property
     def chat_model_class(self) -> Type[ChatAnyLLM]:
         return ChatAnyLLM
@@ -22,7 +22,7 @@ class TestChatAnyLLMStandard(ChatModelIntegrationTests):
     def chat_model_params(self) -> dict:
         return {
             "model": "anthropic:claude-sonnet-4-5-20250929",
-            "model_kwargs": {"temperature": 0},
+            "temperature": 0,
         }
 
     @property

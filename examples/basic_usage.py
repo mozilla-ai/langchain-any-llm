@@ -19,7 +19,7 @@ from langchain_anyllm import ChatAnyLLM
 
 
 def basic_chat_sync() -> None:
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0.7)
 
     messages = [
         ("system", "You are a helpful assistant."),
@@ -31,7 +31,7 @@ def basic_chat_sync() -> None:
 
 
 def streaming_example_sync() -> None:
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0.7)
 
     messages = [("human", "Tell me a short story about a robot.")]
 
@@ -52,7 +52,7 @@ def tool_calling_example_sync() -> None:
             "celsius", description="Temperature unit (celsius or fahrenheit)"
         )
 
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0)
     llm_with_tools = llm.bind_tools([GetWeather])
 
     response = llm_with_tools.invoke("What's the weather like in Paris?")
@@ -77,25 +77,23 @@ def structured_output_example_sync() -> None:
         age: int = Field(..., description="The person's age")
         occupation: str = Field(..., description="The person's occupation")
 
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0)
 
-    # Use bind_tools instead of with_structured_output to avoid tool_choice issues
-    llm_with_tools = llm.bind_tools([Person])
+    # Use with_structured_output for typed responses
+    structured_llm = llm.with_structured_output(Person)
 
-    response = llm_with_tools.invoke(
+    result = structured_llm.invoke(
         "Extract information: John is a 30-year-old software engineer."
     )
 
-    # Extract the structured data from tool calls
-    if response.tool_calls:
-        tool_call = response.tool_calls[0]
-        print(f"Structured output: {tool_call['args']}")
-    else:
-        print(f"Response: {response.content}")
+    # Result is already a Person instance
+    print(f"Name: {result.name}")
+    print(f"Age: {result.age}")
+    print(f"Occupation: {result.occupation}")
 
 
 async def basic_chat() -> None:
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0.7)
 
     messages = [
         ("system", "You are a helpful assistant."),
@@ -107,7 +105,7 @@ async def basic_chat() -> None:
 
 
 async def streaming_example() -> None:
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0.7})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0.7)
 
     messages = [("human", "Tell me a short story about a robot.")]
 
@@ -128,7 +126,7 @@ async def tool_calling_example() -> None:
             "celsius", description="Temperature unit (celsius or fahrenheit)"
         )
 
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0)
     llm_with_tools = llm.bind_tools([GetWeather])
 
     response = await llm_with_tools.ainvoke("What's the weather like in Paris?")
@@ -153,21 +151,19 @@ async def structured_output_example() -> None:
         age: int = Field(..., description="The person's age")
         occupation: str = Field(..., description="The person's occupation")
 
-    llm = ChatAnyLLM(model="openai:gpt-4", model_kwargs={"temperature": 0})
+    llm = ChatAnyLLM(model="openai:gpt-4", temperature=0)
 
-    # Use bind_tools instead of with_structured_output to avoid tool_choice issues
-    llm_with_tools = llm.bind_tools([Person])
+    # Use with_structured_output for typed responses
+    structured_llm = llm.with_structured_output(Person)
 
-    response = await llm_with_tools.ainvoke(
+    result = await structured_llm.ainvoke(
         "Extract information: John is a 30-year-old software engineer."
     )
 
-    # Extract the structured data from tool calls
-    if response.tool_calls:
-        tool_call = response.tool_calls[0]
-        print(f"Structured output: {tool_call['args']}")
-    else:
-        print(f"Response: {response.content}")
+    # Result is already a Person instance
+    print(f"Name: {result.name}")
+    print(f"Age: {result.age}")
+    print(f"Occupation: {result.occupation}")
 
 
 def run_sync_examples() -> None:
