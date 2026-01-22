@@ -2,7 +2,6 @@ import json
 import sys
 from typing import Dict
 
-# Root directory since we flattened the structure
 LIB_DIRS = ["."]
 
 if __name__ == "__main__":

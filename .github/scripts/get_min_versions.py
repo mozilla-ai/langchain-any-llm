@@ -1,15 +1,8 @@
+import re
 import sys
+import tomllib
 from collections import defaultdict
 from typing import Optional
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    # for python 3.10 and below, which doesn't have stdlib tomllib
-    import tomli as tomllib
-
-import re
-from typing import List
 
 import requests
 from packaging.requirements import Requirement
@@ -23,7 +16,7 @@ MIN_VERSION_LIBS = ["langchain-core"]
 SKIP_IF_PULL_REQUEST = ["langchain-core"]
 
 
-def get_pypi_versions(package_name: str) -> List[str]:
+def get_pypi_versions(package_name: str) -> list[str]:
     """
     Fetch all available versions for a package from PyPI.
 
@@ -31,7 +24,7 @@ def get_pypi_versions(package_name: str) -> List[str]:
         package_name (str): Name of the package
 
     Returns:
-        List[str]: List of all available versions
+        list[str]: List of all available versions
 
     Raises:
         requests.exceptions.RequestException: If PyPI API request fails
