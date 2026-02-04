@@ -21,9 +21,12 @@ No need to rewrite your provider-specific adapter code every time you want to te
 ### From PyPI
 
 ```bash
-*Coming soon...*
+pip install langchain-anyllm
 ```
-
+or
+```bash
+uv add langchain-anyllm
+```
 ## Quick Start
 
 **Note:** You need to have the appropriate API key available for your chosen provider. API keys can be passed explicitly via the `api_key` parameter, or set as environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.). See the [any-llm documentation](https://mozilla-ai.github.io/any-llm/providers/) for provider-specific requirements.
