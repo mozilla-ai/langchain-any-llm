@@ -268,6 +268,10 @@ class ChatAnyLLM(BaseChatModel):
         }
         return ChatResult(generations=generations, llm_output=llm_output)
 
+    def _is_anthropic_model(self) -> bool:
+        """Check if the model is an Anthropic model."""
+        return self.model.startswith("anthropic:") or "claude" in self.model.lower()
+
     def _create_params(
         self, stop: list[str] | None = None, **kwargs: Any
     ) -> dict[str, Any]:
@@ -305,10 +309,14 @@ class ChatAnyLLM(BaseChatModel):
             params["response_format"] = self.response_format
 
         if stop is not None:
-            if "stop" in params:
+            if "stop" in params or "stop_sequences" in params:
                 error_message = "`stop` found in both the input and default params."
                 raise ValueError(error_message)
-            params["stop"] = stop
+            # Anthropic uses stop_sequences instead of stop
+            if self._is_anthropic_model():
+                params["stop_sequences"] = stop
+            else:
+                params["stop"] = stop
 
         # Translate LangChain tool_choice to OpenAI-compatible values
         # Only include tool_choice if tools are present
@@ -365,8 +373,10 @@ class ChatAnyLLM(BaseChatModel):
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
 
-        if "stream_options" not in params and self.stream_options:
-            params["stream_options"] = self.stream_options
+        # Anthropic doesn't support stream_options
+        if not self._is_anthropic_model():
+            if "stream_options" not in params and self.stream_options:
+                params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
 
@@ -444,8 +454,10 @@ class ChatAnyLLM(BaseChatModel):
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
 
-        if "stream_options" not in params and self.stream_options:
-            params["stream_options"] = self.stream_options
+        # Anthropic doesn't support stream_options
+        if not self._is_anthropic_model():
+            if "stream_options" not in params and self.stream_options:
+                params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
 
