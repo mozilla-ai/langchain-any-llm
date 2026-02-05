@@ -16,6 +16,15 @@ from typing import (
 )
 
 from any_llm import acompletion, completion
+from any_llm.exceptions import (
+    AnyLLMError,
+    AuthenticationError,
+    ContentFilterError,
+    ContextLengthExceededError,
+    InvalidRequestError,
+    ModelNotFoundError,
+    RateLimitError,
+)
 from any_llm.types.completion import ChatCompletion, ChatCompletionChunk
 from langchain_core.callbacks import (
     AsyncCallbackManagerForLLMRun,
@@ -50,19 +59,49 @@ logger = logging.getLogger(__name__)
 
 
 class ChatAnyLLM(BaseChatModel):
-    """Chat model that uses the AnyLLM API."""
+    """Chat model that uses the AnyLLM API.
+
+    This class provides a LangChain-compatible interface to any-llm, which supports
+    multiple LLM providers (OpenAI, Anthropic, Google, local models, etc.) through
+    a unified API.
+
+    Example:
+        .. code-block:: python
+
+            from langchain_anyllm import ChatAnyLLM
+
+            # Using model string with provider prefix
+            llm = ChatAnyLLM(model="openai:gpt-4")
+
+            # Or using separate provider parameter
+            llm = ChatAnyLLM(model="gpt-4", provider="openai")
+
+            response = llm.invoke("Hello, how are you?")
+
+    Attributes:
+        model: The model identifier. Can include provider prefix (e.g., "openai:gpt-4")
+            or be used with separate provider parameter.
+        provider: Optional provider name. If not specified, extracted from model string.
+        api_key: API key for the provider. If not set, uses environment variable.
+        api_base: Custom API base URL for the provider.
+        temperature: Sampling temperature (0.0 to 2.0).
+        max_tokens: Maximum number of tokens to generate.
+        top_p: Nucleus sampling parameter.
+        response_format: Response format specification. Use {"type": "json_object"}
+            for JSON mode.
+        model_kwargs: Additional model parameters passed to the API.
+    """
 
     model: str
+    provider: str | None = None
     api_key: str | None = None
     api_base: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
+    top_p: float | None = None
+    response_format: dict[str, Any] | None = None
     model_kwargs: dict[str, Any] = Field(default_factory=dict)
-    stream_options: dict[str, Any] | None = Field(
-        default_factory=lambda: {"include_usage": True}
-    )
-
-    def _is_anthropic_model(self) -> bool:
-        """Check if the model is an Anthropic model."""
-        return self.model.startswith("anthropic:") or "claude" in self.model.lower()
+    stream_options: dict[str, Any] | None = None
 
     def _generate(
         self,
@@ -72,6 +111,21 @@ class ChatAnyLLM(BaseChatModel):
         stream: bool = False,
         **kwargs: Any,
     ) -> ChatResult:
+        """Generate a chat response from the model.
+
+        Args:
+            messages: List of messages in the conversation.
+            stop: Optional list of stop sequences.
+            run_manager: Optional callback manager for the run.
+            stream: Whether to stream the response.
+            **kwargs: Additional parameters passed to the model.
+
+        Returns:
+            ChatResult containing the model's response.
+
+        Raises:
+            ValueError: If the response type is unexpected.
+        """
         if stream:
             stream_iter = self._stream(
                 messages, stop=stop, run_manager=run_manager, **kwargs
@@ -79,15 +133,115 @@ class ChatAnyLLM(BaseChatModel):
             return generate_from_stream(stream_iter)
 
         message_dicts = [_convert_message_to_dict(m) for m in messages]
-        logger.warning(f"Message dicts: {message_dicts}")
+        logger.debug(f"Message dicts: {message_dicts}")
         params = self._create_params(stop, **kwargs)
-        response = completion(messages=message_dicts, **params)  # type: ignore[arg-type]
+        response = self._call_completion(message_dicts, params)
+        return self._create_chat_result(response)
+
+    def _call_completion(
+        self, messages: list[dict[str, Any]], params: dict[str, Any]
+    ) -> ChatCompletion:
+        """Call the any-llm completion API with error handling.
+
+        Args:
+            messages: List of message dictionaries.
+            params: Parameters for the completion call.
+
+        Returns:
+            ChatCompletion response from the API.
+
+        Raises:
+            ValueError: If authentication fails or API key is missing.
+            RuntimeError: If the model is not found or provider error occurs.
+        """
+        try:
+            response = completion(messages=messages, **params)  # type: ignore[arg-type]
+        except AuthenticationError as e:
+            raise ValueError(f"Authentication failed: {e}") from e
+        except ModelNotFoundError as e:
+            raise ValueError(f"Model not found: {e}") from e
+        except RateLimitError as e:
+            raise RuntimeError(f"Rate limit exceeded: {e}") from e
+        except ContextLengthExceededError as e:
+            raise ValueError(f"Context length exceeded: {e}") from e
+        except ContentFilterError as e:
+            raise ValueError(f"Content filtered: {e}") from e
+        except InvalidRequestError as e:
+            raise ValueError(f"Invalid request: {e}") from e
+        except AnyLLMError as e:
+            raise RuntimeError(f"AnyLLM error: {e}") from e
+
         if not isinstance(response, ChatCompletion):
             error_message = f"Expected ChatCompletion, got {type(response)}"
             raise ValueError(error_message)
-        return self._create_chat_result(response)
+        return response
+
+    async def _acall_completion(
+        self, messages: list[dict[str, Any]], params: dict[str, Any]
+    ) -> ChatCompletion:
+        """Call the any-llm async completion API with error handling.
+
+        Args:
+            messages: List of message dictionaries.
+            params: Parameters for the completion call.
+
+        Returns:
+            ChatCompletion response from the API.
+
+        Raises:
+            ValueError: If authentication fails or API key is missing.
+            RuntimeError: If the model is not found or provider error occurs.
+        """
+        try:
+            response = await acompletion(messages=messages, **params)  # type: ignore[arg-type]
+        except AuthenticationError as e:
+            raise ValueError(f"Authentication failed: {e}") from e
+        except ModelNotFoundError as e:
+            raise ValueError(f"Model not found: {e}") from e
+        except RateLimitError as e:
+            raise RuntimeError(f"Rate limit exceeded: {e}") from e
+        except ContextLengthExceededError as e:
+            raise ValueError(f"Context length exceeded: {e}") from e
+        except ContentFilterError as e:
+            raise ValueError(f"Content filtered: {e}") from e
+        except InvalidRequestError as e:
+            raise ValueError(f"Invalid request: {e}") from e
+        except AnyLLMError as e:
+            raise RuntimeError(f"AnyLLM error: {e}") from e
+
+        if not isinstance(response, ChatCompletion):
+            error_message = f"Expected ChatCompletion, got {type(response)}"
+            raise ValueError(error_message)
+        return response
+
+    def _extract_usage_metadata(
+        self, usage: dict[str, Any] | None
+    ) -> UsageMetadata | None:
+        """Extract usage metadata from a usage dictionary.
+
+        Args:
+            usage: Dictionary containing usage information.
+
+        Returns:
+            UsageMetadata object or None if usage is not available.
+        """
+        if not usage:
+            return None
+        return UsageMetadata(
+            input_tokens=usage.get("prompt_tokens", 0),
+            output_tokens=usage.get("completion_tokens", 0),
+            total_tokens=usage.get("total_tokens", 0),
+        )
 
     def _create_chat_result(self, response: ChatCompletion) -> ChatResult:
+        """Create a ChatResult from an API response.
+
+        Args:
+            response: ChatCompletion response from the API.
+
+        Returns:
+            ChatResult containing the parsed response.
+        """
         resp_dict = response.model_dump()
 
         generations = []
@@ -117,29 +271,44 @@ class ChatAnyLLM(BaseChatModel):
     def _create_params(
         self, stop: list[str] | None = None, **kwargs: Any
     ) -> dict[str, Any]:
-        params = {
-            "api_key": self.api_key,
-            "api_base": self.api_base,
+        """Create parameters dictionary for the API call.
+
+        Args:
+            stop: Optional list of stop sequences.
+            **kwargs: Additional parameters to include.
+
+        Returns:
+            Dictionary of parameters for the completion call.
+
+        Raises:
+            ValueError: If stop is specified in both input and model_kwargs.
+        """
+        params: dict[str, Any] = {
             "model": self.model,
             **self.model_kwargs,
         }
 
-        is_anthropic = self._is_anthropic_model()
+        # Add optional parameters only if set
+        if self.provider is not None:
+            params["provider"] = self.provider
+        if self.api_key is not None:
+            params["api_key"] = self.api_key
+        if self.api_base is not None:
+            params["api_base"] = self.api_base
+        if self.temperature is not None:
+            params["temperature"] = self.temperature
+        if self.max_tokens is not None:
+            params["max_tokens"] = self.max_tokens
+        if self.top_p is not None:
+            params["top_p"] = self.top_p
+        if self.response_format is not None:
+            params["response_format"] = self.response_format
 
-        # Handle stop sequences - Anthropic uses stop_sequences instead of stop
         if stop is not None:
-            if is_anthropic:
-                if "stop_sequences" in params:
-                    error_message = (
-                        "`stop_sequences` found in both the input and default params."
-                    )
-                    raise ValueError(error_message)
-                params["stop_sequences"] = stop
-            else:
-                if "stop" in params:
-                    error_message = "`stop` found in both the input and default params."
-                    raise ValueError(error_message)
-                params["stop"] = stop
+            if "stop" in params:
+                error_message = "`stop` found in both the input and default params."
+                raise ValueError(error_message)
+            params["stop"] = stop
 
         # Translate LangChain tool_choice to OpenAI-compatible values
         # Only include tool_choice if tools are present
@@ -181,43 +350,54 @@ class ChatAnyLLM(BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> Iterator[ChatGenerationChunk]:
+        """Stream chat responses from the model.
+
+        Args:
+            messages: List of messages in the conversation.
+            stop: Optional list of stop sequences.
+            run_manager: Optional callback manager for the run.
+            **kwargs: Additional parameters passed to the model.
+
+        Yields:
+            ChatGenerationChunk objects for each streamed response chunk.
+        """
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
 
-        # Set stream_options for usage metadata if not already provided
-        # Note: Anthropic doesn't support stream_options parameter
-        if not self._is_anthropic_model():
-            if "stream_options" not in params and self.stream_options:
-                params["stream_options"] = self.stream_options
+        if "stream_options" not in params and self.stream_options:
+            params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
-        result = completion(messages=message_dicts, **params)  # type: ignore[arg-type]
+
+        try:
+            result = completion(messages=message_dicts, **params)  # type: ignore[arg-type]
+        except AuthenticationError as e:
+            raise ValueError(f"Authentication failed: {e}") from e
+        except ModelNotFoundError as e:
+            raise ValueError(f"Model not found: {e}") from e
+        except RateLimitError as e:
+            raise RuntimeError(f"Rate limit exceeded: {e}") from e
+        except AnyLLMError as e:
+            raise RuntimeError(f"AnyLLM error: {e}") from e
 
         if not isinstance(result, Iterator):
             error_message = f"Expected Iterator, got {type(result)}"
             raise ValueError(error_message)
 
-        # Iterate over stream results
         for chunk_item in result:
             chunk_dict: dict[str, Any] = chunk_item.model_dump()
 
             # Handle usage-only chunk (final chunk with empty choices but usage data)
             if len(chunk_dict["choices"]) == 0:
-                if chunk_dict.get("usage"):
-                    # Create an empty chunk with usage metadata
-                    usage = chunk_dict["usage"]
+                usage_metadata = self._extract_usage_metadata(chunk_dict.get("usage"))
+                if usage_metadata:
                     usage_chunk = AIMessageChunk(
                         content="",
                         response_metadata={"model_name": self.model},
-                        usage_metadata=UsageMetadata(
-                            input_tokens=usage.get("prompt_tokens", 0),
-                            output_tokens=usage.get("completion_tokens", 0),
-                            total_tokens=usage.get("total_tokens", 0),
-                        ),
+                        usage_metadata=usage_metadata,
                     )
-                    cg_chunk = ChatGenerationChunk(message=usage_chunk)
-                    yield cg_chunk
+                    yield ChatGenerationChunk(message=usage_chunk)
                 continue
 
             choice = chunk_dict["choices"][0]
@@ -229,13 +409,11 @@ class ChatAnyLLM(BaseChatModel):
             finish_reason = choice.get("finish_reason")
             if finish_reason and chunk_dict.get("usage"):
                 if isinstance(message_chunk, AIMessageChunk):
-                    usage = chunk_dict["usage"]
-                    message_chunk.usage_metadata = UsageMetadata(
-                        input_tokens=usage.get("prompt_tokens", 0),
-                        output_tokens=usage.get("completion_tokens", 0),
-                        total_tokens=usage.get("total_tokens", 0),
+                    message_chunk.usage_metadata = self._extract_usage_metadata(
+                        chunk_dict["usage"]
                     )
                     message_chunk.response_metadata = {"model_name": self.model}
+
             default_chunk_class = message_chunk.__class__
             cg_chunk = ChatGenerationChunk(message=message_chunk)
             if run_manager:
@@ -251,21 +429,41 @@ class ChatAnyLLM(BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[ChatGenerationChunk]:
+        """Async stream chat responses from the model.
+
+        Args:
+            messages: List of messages in the conversation.
+            stop: Optional list of stop sequences.
+            run_manager: Optional callback manager for the run.
+            **kwargs: Additional parameters passed to the model.
+
+        Yields:
+            ChatGenerationChunk objects for each streamed response chunk.
+        """
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
         params["stream"] = True
 
-        # Set stream_options for usage metadata if not already provided
-        # Note: Anthropic doesn't support stream_options parameter
-        if not self._is_anthropic_model():
-            if "stream_options" not in params and self.stream_options:
-                params["stream_options"] = self.stream_options
+        if "stream_options" not in params and self.stream_options:
+            params["stream_options"] = self.stream_options
 
         default_chunk_class: type[BaseMessageChunk] = AIMessageChunk
-        result = await acompletion(messages=message_dicts, **params)  # type: ignore[arg-type]
+
+        try:
+            result = await acompletion(messages=message_dicts, **params)  # type: ignore[arg-type]
+        except AuthenticationError as e:
+            raise ValueError(f"Authentication failed: {e}") from e
+        except ModelNotFoundError as e:
+            raise ValueError(f"Model not found: {e}") from e
+        except RateLimitError as e:
+            raise RuntimeError(f"Rate limit exceeded: {e}") from e
+        except AnyLLMError as e:
+            raise RuntimeError(f"AnyLLM error: {e}") from e
+
         if not isinstance(result, AsyncIterator):
             error_message = f"Expected AsyncIterator, got {type(result)}"
             raise ValueError(error_message)
+
         async for stream_chunk in result:
             if not isinstance(stream_chunk, ChatCompletionChunk):
                 error_message = "Unexpected chunk type"
@@ -275,17 +473,14 @@ class ChatAnyLLM(BaseChatModel):
             if len(stream_chunk.choices) == 0:
                 if hasattr(stream_chunk, "usage") and stream_chunk.usage:
                     usage = stream_chunk.usage.model_dump()
-                    usage_chunk = AIMessageChunk(
-                        content="",
-                        response_metadata={"model_name": self.model},
-                        usage_metadata=UsageMetadata(
-                            input_tokens=usage.get("prompt_tokens", 0),
-                            output_tokens=usage.get("completion_tokens", 0),
-                            total_tokens=usage.get("total_tokens", 0),
-                        ),
-                    )
-                    cg_chunk = ChatGenerationChunk(message=usage_chunk)
-                    yield cg_chunk
+                    usage_metadata = self._extract_usage_metadata(usage)
+                    if usage_metadata:
+                        usage_chunk = AIMessageChunk(
+                            content="",
+                            response_metadata={"model_name": self.model},
+                            usage_metadata=usage_metadata,
+                        )
+                        yield ChatGenerationChunk(message=usage_chunk)
                 continue
 
             for choice in stream_chunk.choices:
@@ -299,12 +494,11 @@ class ChatAnyLLM(BaseChatModel):
                     if hasattr(stream_chunk, "usage") and stream_chunk.usage:
                         if isinstance(message_chunk, AIMessageChunk):
                             usage = stream_chunk.usage.model_dump()
-                            message_chunk.usage_metadata = UsageMetadata(
-                                input_tokens=usage.get("prompt_tokens", 0),
-                                output_tokens=usage.get("completion_tokens", 0),
-                                total_tokens=usage.get("total_tokens", 0),
+                            message_chunk.usage_metadata = self._extract_usage_metadata(
+                                usage
                             )
                             message_chunk.response_metadata = {"model_name": self.model}
+
                 default_chunk_class = message_chunk.__class__
                 cg_chunk = ChatGenerationChunk(message=message_chunk)
                 if run_manager:
@@ -321,6 +515,18 @@ class ChatAnyLLM(BaseChatModel):
         stream: bool | None = None,
         **kwargs: Any,
     ) -> ChatResult:
+        """Async generate a chat response from the model.
+
+        Args:
+            messages: List of messages in the conversation.
+            stop: Optional list of stop sequences.
+            run_manager: Optional callback manager for the run.
+            stream: Whether to stream the response.
+            **kwargs: Additional parameters passed to the model.
+
+        Returns:
+            ChatResult containing the model's response.
+        """
         should_stream = stream if stream is not None else False
         if should_stream:
             stream_iter = self._astream(
@@ -330,10 +536,7 @@ class ChatAnyLLM(BaseChatModel):
 
         message_dicts = [_convert_message_to_dict(m) for m in messages]
         params = self._create_params(stop, **kwargs)
-        response = await acompletion(messages=message_dicts, **params)  # type: ignore[arg-type]
-        if not isinstance(response, ChatCompletion):
-            error_message = f"Expected ChatCompletion, got {type(response)}"
-            raise ValueError(error_message)
+        response = await self._acall_completion(message_dicts, params)
         return self._create_chat_result(response)
 
     def bind_tools(
@@ -344,17 +547,36 @@ class ChatAnyLLM(BaseChatModel):
         tool_choice: dict[str, Any] | str | bool | None = None,
         **kwargs: Any,
     ) -> Runnable[LanguageModelInput, AIMessage]:
-        """Bind tool-like objects to this chat model."""
+        """Bind tool-like objects to this chat model.
+
+        Args:
+            tools: Sequence of tools to bind. Can be dictionaries, Pydantic models,
+                callables, or BaseTool instances.
+            tool_choice: How the model should choose tools. Can be:
+                - None: Model decides whether to use tools
+                - "auto": Model decides whether to use tools
+                - "required" or "any" or True: Model must use a tool
+                - "none" or False: Model must not use tools
+                - str: Name of specific tool to use
+                - dict: Full tool_choice specification
+            **kwargs: Additional parameters passed to the model.
+
+        Returns:
+            A Runnable that will use the bound tools.
+        """
         formatted_tools = [convert_to_openai_tool(tool) for tool in tools]
         return super().bind(tools=formatted_tools, tool_choice=tool_choice, **kwargs)
 
     @property
     def _identifying_params(self) -> dict[str, Any]:
-        return {
-            "model": self.model,
-            **self.model_kwargs,
-        }
+        """Return identifying parameters for this model."""
+        params: dict[str, Any] = {"model": self.model}
+        if self.provider:
+            params["provider"] = self.provider
+        params.update(self.model_kwargs)
+        return params
 
     @property
     def _llm_type(self) -> str:
+        """Return the type of LLM."""
         return "anyllm-chat"

@@ -99,23 +99,40 @@ print(response.tool_calls)
 ```python
 from langchain_anyllm import ChatAnyLLM
 
+# Using model string with provider prefix
 llm = ChatAnyLLM(
     model="openai:gpt-4",
     api_key="your-api-key",  # Optional, reads from environment if not provided
     api_base="https://custom-endpoint.com/v1",  # Optional custom endpoint
-    model_kwargs={
-        "temperature": 0.7,
-        "max_tokens": 1000,
-        "top_p": 0.9,
-    }
+    temperature=0.7,
+    max_tokens=1000,
+    top_p=0.9,
+)
+
+# Or using separate provider parameter
+llm = ChatAnyLLM(
+    model="gpt-4",
+    provider="openai",
+    temperature=0.7,
+)
+
+# Enable JSON mode
+llm = ChatAnyLLM(
+    model="openai:gpt-4",
+    response_format={"type": "json_object"},
 )
 ```
 
 ## Parameters
 
-- `model` (str): The model to use (e.g., "openai:gpt-4", "anthropic:claude-3-sonnet-20240229")
+- `model` (str): The model to use. Can include provider prefix (e.g., "openai:gpt-4") or be used with separate `provider` parameter
+- `provider` (str, optional): Provider name (e.g., "openai", "anthropic"). If not set, extracted from model string
 - `api_key` (str, optional): API key for the provider. Reads from environment if not provided
 - `api_base` (str, optional): Custom API endpoint
+- `temperature` (float, optional): Sampling temperature (0.0 to 2.0)
+- `max_tokens` (int, optional): Maximum number of tokens to generate
+- `top_p` (float, optional): Nucleus sampling parameter
+- `response_format` (dict, optional): Response format specification. Use `{"type": "json_object"}` for JSON mode
 - `model_kwargs` (dict, optional): Additional parameters to pass to the model
 
 ## Supported Providers
@@ -128,8 +145,8 @@ any-llm supports a wide range of providers. See the [full list here](https://moz
 ### Clone the repo
 
 ```bash
-git clone [https://github.com/mozilla-ai/langchain-any-llm.git](https://github.com/mozilla-ai/langchain-any-llm.git)
-cd langchain-any-llm/libs/langchain-any-llm
+git clone https://github.com/mozilla-ai/langchain-any-llm.git
+cd langchain-any-llm
 ```
 
 ### Run Tests
