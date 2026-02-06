@@ -393,7 +393,7 @@ wheels = [
 
 [[package]]
 name = "langchain-anyllm"
-version = "0.1.0"
+version = "0.0.1a1"
 source = { editable = "." }
 dependencies = [
     { name = "any-llm-sdk", extra = ["anthropic"] },
@@ -421,7 +421,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "any-llm-sdk", extras = ["anthropic"], specifier = ">=1.0.0,<2.0" },
-    { name = "langchain-core", specifier = ">=0.3.0,<2.0" },
+    { name = "langchain-core", specifier = ">=1.0.0,<2.0" },
 ]
 
 [package.metadata.requires-dev]
