@@ -267,5 +267,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           generateReleaseNotes: true
-          tag: ${{ inputs.working-directory }}/v${{ needs.build.outputs.version }}
+          tag: ${{ inputs.working-directory == '.' && format('v{0}', needs.build.outputs.version) || format('{0}/v{1}', inputs.working-directory, needs.build.outputs.version) }}
           commit: ${{ github.sha }}
