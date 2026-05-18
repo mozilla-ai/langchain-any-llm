@@ -9,11 +9,11 @@ all: help
 
 # Run unit tests
 test tests:
-	uv run pytest tests/
+	uv run --group test pytest tests/
 
 # Run integration tests
 integration_tests:
-	uv run pytest tests/integration_tests/
+	uv run --group test pytest tests/integration_tests/
 
 ######################
 # LINTING AND FORMATTING
@@ -21,31 +21,31 @@ integration_tests:
 
 # Format code using ruff
 format format_diff:
-	uv run ruff format .
-	uv run ruff check . --fix
+	uv run --group lint ruff format .
+	uv run --group lint ruff check . --fix
 
 # Lint code
 lint lint_diff:
-	uv run ruff check .
-	uv run mypy .
+	uv run --group lint ruff check .
+	uv run --group lint mypy .
 
 # Lint package code only
 lint_package:
-	uv run ruff check langchain_anyllm/
-	uv run mypy langchain_anyllm/
+	uv run --group lint ruff check langchain_anyllm/
+	uv run --group lint mypy langchain_anyllm/
 
 # Lint test code only
 lint_tests:
-	uv run ruff check tests/
-	uv run mypy tests/
+	uv run --group lint ruff check tests/
+	uv run --group lint mypy tests/
 
 # Spell check
 spell_check:
-	uv run codespell --toml pyproject.toml
+	uv run --group codespell codespell --toml pyproject.toml
 
 # Fix spelling
 spell_fix:
-	uv run codespell --toml pyproject.toml -w
+	uv run --group codespell codespell --toml pyproject.toml -w
 
 ######################
 # PRE-COMMIT
@@ -53,15 +53,15 @@ spell_fix:
 
 # Install pre-commit hooks
 pc-install:
-	uv run pre-commit install
+	uv run --group dev pre-commit install
 
 # Run pre-commit on all files
 pc-run:
-	uv run pre-commit run --all-files
+	uv run --group dev pre-commit run --all-files
 
 # Update pre-commit hooks
 pc-update:
-	uv run pre-commit autoupdate
+	uv run --group dev pre-commit autoupdate
 
 ######################
 # HELP

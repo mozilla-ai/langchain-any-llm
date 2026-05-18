@@ -1,8 +1,38 @@
 """Test ChatAnyLLM chat model."""
 
+import msgpack
 import pytest
+from any_llm.types.completion import ChatCompletion
+from langchain_core.messages import AIMessage
 
 from langchain_anyllm import ChatAnyLLM
+
+
+def _build_chat_completion(
+    *,
+    model: str = "openai:gpt-4o-mini",
+    content: str = "hello",
+) -> ChatCompletion:
+    return ChatCompletion.model_validate(
+        {
+            "id": "chatcmpl-1",
+            "choices": [
+                {
+                    "finish_reason": "stop",
+                    "index": 0,
+                    "message": {"role": "assistant", "content": content},
+                }
+            ],
+            "created": 0,
+            "model": model,
+            "object": "chat.completion",
+            "usage": {
+                "prompt_tokens": 1,
+                "completion_tokens": 2,
+                "total_tokens": 3,
+            },
+        }
+    )
 
 
 class TestChatAnyLLM:
@@ -113,3 +143,63 @@ class TestChatAnyLLM:
         llm = ChatAnyLLM(model="gpt-4")
         structured_llm = llm.with_structured_output(TestSchema)
         assert structured_llm is not None
+
+    def test_create_chat_result_keeps_token_usage_msgpack_serializable(self) -> None:
+        """Test token usage metadata stays serializable after LangChain merges it."""
+        llm = ChatAnyLLM(model="openai:gpt-4o-mini")
+        result = llm._create_chat_result(_build_chat_completion())
+        assert result.llm_output is not None
+        message = result.generations[0].message
+        assert isinstance(message, AIMessage)
+        message.response_metadata = {**result.llm_output, **message.response_metadata}
+
+        assert result.llm_output == {
+            "token_usage": {
+                "prompt_tokens": 1,
+                "completion_tokens": 2,
+                "total_tokens": 3,
+                "completion_tokens_details": None,
+                "prompt_tokens_details": None,
+            },
+            "model": "openai:gpt-4o-mini",
+        }
+        assert message.usage_metadata == {
+            "input_tokens": 1,
+            "output_tokens": 2,
+            "total_tokens": 3,
+        }
+        msgpack.packb(message.model_dump())
+
+    @pytest.mark.parametrize(
+        ("model", "provider", "expected_provider", "expected_model"),
+        [
+            ("openai:gpt-4o-mini", None, "openai", "gpt-4o-mini"),
+            ("gpt-4o-mini", "openai", "openai", "gpt-4o-mini"),
+            ("openai:gpt-4o-mini", "openai", "openai", "gpt-4o-mini"),
+            ("gemini:gemini-2.0-flash", None, "google_genai", "gemini-2.0-flash"),
+            ("llama3.2:3b", "ollama", "ollama", "llama3.2:3b"),
+        ],
+    )
+    def test_get_ls_params_normalizes_provider_and_model(
+        self,
+        model: str,
+        provider: str | None,
+        expected_provider: str,
+        expected_model: str,
+    ) -> None:
+        """Test LangSmith metadata matches AnyLLM provider/model semantics."""
+        llm = ChatAnyLLM(
+            model=model,
+            provider=provider,
+            temperature=0.5,
+            max_tokens=64,
+        )
+
+        ls_params = llm._get_ls_params(stop=["DONE"])
+
+        assert ls_params["ls_provider"] == expected_provider
+        assert ls_params["ls_model_name"] == expected_model
+        assert ls_params["ls_model_type"] == "chat"
+        assert ls_params["ls_temperature"] == 0.5
+        assert ls_params["ls_max_tokens"] == 64
+        assert ls_params["ls_stop"] == ["DONE"]
