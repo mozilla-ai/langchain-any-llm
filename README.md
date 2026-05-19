@@ -152,19 +152,19 @@ cd langchain-any-llm
 ### Run Tests
 
 ```bash
-uv run pytest tests/
+uv run --group test pytest tests/
 ```
 
 ### Type Checking
 
 ```bash
-mypy langchain_anyllm/
+uv run --group lint mypy langchain_anyllm/
 ```
 
 ### Linting
 
 ```bash
-ruff check langchain_anyllm/
+uv run --group lint ruff check langchain_anyllm/
 ```
 
 ## License

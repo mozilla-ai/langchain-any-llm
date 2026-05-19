@@ -31,6 +31,7 @@ from langchain_core.callbacks import (
     CallbackManagerForLLMRun,
 )
 from langchain_core.language_models import LanguageModelInput
+from langchain_core.language_models.base import LangSmithParams
 from langchain_core.language_models.chat_models import (
     BaseChatModel,
     agenerate_from_stream,
@@ -56,6 +57,11 @@ from langchain_anyllm.utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+_LS_PROVIDER_ALIASES = {
+    "gemini": "google_genai",
+    "vertexai": "google_vertexai",
+}
 
 
 class ChatAnyLLM(BaseChatModel):
@@ -245,17 +251,13 @@ class ChatAnyLLM(BaseChatModel):
         resp_dict = response.model_dump()
 
         generations = []
-        token_usage = response.usage
+        token_usage = resp_dict.get("usage")
+        usage_metadata = self._extract_usage_metadata(token_usage)
         for res in resp_dict["choices"]:
             message = _convert_dict_to_message(res["message"])
-            if isinstance(message, AIMessage) and token_usage:
+            if isinstance(message, AIMessage) and usage_metadata:
                 message.response_metadata = {"model_name": self.model}
-                message.usage_metadata = UsageMetadata(
-                    input_tokens=token_usage.prompt_tokens,
-                    output_tokens=token_usage.completion_tokens,
-                    total_tokens=token_usage.prompt_tokens
-                    + token_usage.completion_tokens,
-                )
+                message.usage_metadata = usage_metadata
             gen = ChatGeneration(
                 message=message,
                 generation_info={"finish_reason": res.get("finish_reason")},
@@ -587,6 +589,40 @@ class ChatAnyLLM(BaseChatModel):
             params["provider"] = self.provider
         params.update(self.model_kwargs)
         return params
+
+    def _get_ls_provider_and_model(
+        self, *, provider: str | None = None, model: str | None = None
+    ) -> tuple[str | None, str]:
+        """Normalize provider/model names for LangSmith metadata."""
+        provider = provider or self.provider
+        model = model or self.model
+
+        if provider:
+            provider = provider.lower()
+            prefixed_provider = f"{provider}:"
+            if model.startswith(prefixed_provider):
+                return provider, model[len(prefixed_provider) :]
+            return provider, model
+
+        if ":" in model:
+            parsed_provider, _, parsed_model = model.partition(":")
+            return parsed_provider.lower(), parsed_model
+
+        return None, model
+
+    def _get_ls_params(
+        self, stop: list[str] | None = None, **kwargs: Any
+    ) -> LangSmithParams:
+        """Return LangSmith tracing params with normalized AnyLLM metadata."""
+        ls_params = super()._get_ls_params(stop=stop, **kwargs)
+        provider, model = self._get_ls_provider_and_model(
+            provider=kwargs.get("provider"),
+            model=kwargs.get("model"),
+        )
+        if provider:
+            ls_params["ls_provider"] = _LS_PROVIDER_ALIASES.get(provider, provider)
+        ls_params["ls_model_name"] = model
+        return ls_params
 
     @property
     def _llm_type(self) -> str:
